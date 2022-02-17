@@ -1,70 +1,145 @@
+// #include "serverUtils.c"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <strings.h>
+#include "string.h"
+#include "fcntl.h"
 #include <stdio.h>
+#include <netdb.h>
+#include "stdlib.h"
 
-int main () {
+#ifndef	INADDR_NONE
+#define	INADDR_NONE	0xffffffff
+#endif	/* INADDR_NONE */
 
-	int s;
-	int b;
+ssize_t getLineFromFile(FILE *fp, char *line, size_t len)
+{
+    if (fgets(line, len, fp) == NULL)
+        return -1;
+    
+    return strlen(line);
+}
 
-	struct sockaddr_in sin;
-	struct hostent *server;
-	int addrlen, new_socket;
-	struct sockaddr_in address;
-	char buffer[512];
-	ssize_t ssize;
+void writeLineToFile(char *filepath, char *line)
+{
+    int fd = open(filepath, O_CREAT, O_WRONLY, O_APPEND, 0777);
+    if (fd < 0)
+        perror("ERROR can't open the file ");
 
-	bzero((char *) &sin, sizeof(sin));
+    int ret = write(fd, line, strlen(line));
+    if (ret < 0)
+        perror("ERROR can't write to the file ");
+}
 
-    	sin.sin_addr.s_addr = INADDR_ANY;
+void readConfigFile(int *connections, char *root, char *index, char *port)
+{
+	FILE *configFile = fopen("../conf/serverConfig.conf", "r");
+	if (configFile == NULL)		//failed to open file
+	{
+		perror("Couldn't open configFile ");
+		exit(1);
+	}
+
+	char *line = (char *)malloc(sizeof(char) * 100);
+	size_t len = 100;
+
+	if (getLineFromFile(configFile, line, len) != -1)		//read # connections
+	{
+		sscanf(line, "%d", *&connections);
+	}
+
+	if (getLineFromFile(configFile, line, len) != -1)		//read rootDirectory
+	{
+		strcpy(root, line);
+	}
+
+	if (getLineFromFile(configFile, line, len) != -1)		//read indexFileName
+	{
+		strcpy(index, line);
+	}
+
+	if (getLineFromFile(configFile, line, len) != -1)		//read port number
+	{
+		strcpy(port, line);
+	}	
+
+	free(line);
+}
+
+int passivesock(const char *service, const char *transport, int qlen)
+/*
+ * Arguments:
+ *      service   - service associated with the desired port
+ *      transport - transport protocol to use ("tcp" or "udp")
+ *      qlen      - maximum server request queue length
+ */
+{
+	struct servent	*pse;	/* pointer to service information entry	*/
+	struct protoent *ppe;	/* pointer to protocol information entry*/
+	struct sockaddr_in sin;	/* an Internet endpoint address		*/
+	int	s, type;	/* socket descriptor and socket type	*/
+
+	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(6000);
+	sin.sin_addr.s_addr = INADDR_ANY;
 
-	s = socket(PF_INET, SOCK_STREAM, 0);
-	if (s < 0) {
-		perror("Could not create socket because ");
-	}
+    /* Map service name to port number */
+	if ( pse = getservbyname(service, transport) )
+		sin.sin_port = htons(ntohs((unsigned short)pse->s_port));
+	else if ((sin.sin_port=htons((unsigned short)atoi(service))) == 0)
+		perror("can't get service entry ");
 
-	b = bind(s, (struct sockaddr *)&sin, sizeof(sin));
-	if (b < 0) {
-		perror("Could not bind to socket because ");
-	}
+    /* Map protocol name to protocol number */
+	if ( (ppe = getprotobyname(transport)) == 0)
+		perror("can't get protocol entry ");
 
-	listen(s, 12);
-
-	addrlen = sizeof(struct sockaddr_in);
-	new_socket = accept(s, (struct sockaddr *)&address, &addrlen);
-	if (new_socket<0)
-	        perror("Accept connection");
+    /* Use protocol to choose a socket type */
+	if (strcmp(transport, "udp") == 0)
+		type = SOCK_DGRAM;
 	else
-		fprintf(stderr, "got a connection\n");
+		type = SOCK_STREAM;
 
-	ssize = recv(new_socket, &buffer, sizeof(buffer), 0);
+    /* Allocate a socket */
+	s = socket(PF_INET, type, ppe->p_proto);
+	if (s < 0)
+		perror("can't create socket ");
 
-	// from browser
-	// GET /index.html Http/1.1
-	// Con/........
+    /* Bind the socket */
+	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+		perror("can't bind to port ");
 
+	// if (type == SOCK_STREAM && listen(s, qlen) < 0)
+	// 	perror("can't listen on port %s\n");
 
-	// hard code response:
-	// HTTP/1.1 200 OK
-	// Date: Sat, 28 Nov 2009 04:36:25 GMT
-	// Server: LiteSpeed
-	// Connection: close
+	return s;
+}
 
-	// 2 <CR>
-	// file = open("index.html", ....);
-	// read(file, buf, sizeof(buf));
-	// write(socket-from-accept, buf, sizeof(buf));
-	// close
-	// https://code.tutsplus.com/tutorials/http-headers-for-dummies--net-8039
-	if (ssize < 0)
-		perror("Did not receive anything because ");
-	else {
-		fprintf(stderr,"Got \"%s\" from socket\n", buffer);
-		fprintf(stderr,"String length = %d \n", strlen(buffer));
-	}
+int main()
+{
+	int simultaneousConnections, sockfd, connfd;
+	char rootDirectory[100], indexFileName[100], portNumber[10];
+
+	readConfigFile(&simultaneousConnections, rootDirectory, indexFileName, portNumber);
+
+	if ((sockfd = passivesock(portNumber, "tcp", 2000)) == -1)
+		exit(2);
+
+	while(1)
+	{
+        connfd = accept(sockfd, (SA *) &cli, &len);
+        if (connfd < 0) {
+            printf("Server accept failed...\n");
+            exit(0);
+        } else
+            printf("Server accept the client...\n");
+
+        // Function for chatting between client and server
+        // func(connfd);
+    }
+
+	return 0;
 }
