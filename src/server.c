@@ -33,18 +33,8 @@ int main(int argc, char *argv[])
         }
         else   
             printf("Server accept\n");
-        
-        ssize = recv(connfd, &buffer, sizeof(buffer), 0);
-        if (ssize < 0)
-        {
-            perror("Server receive failed because ");
-            exit(1);
-        }
-        else
-        {
-            printf("Got: %s\n", buffer);
-            printf("Buffer size of: %ld\n", strlen(buffer));
-        }
+            
+        readHandler(connfd);
     }
 
     close(sockfd);      //server never shut down

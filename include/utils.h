@@ -18,3 +18,4 @@ ssize_t getLineFromFile(FILE *fp, char *line, size_t len);
 void writeLineToFile(char *filepath, char *line);
 void readConfigFile(char *inputFile, int *connections, char *root, char *index, char *port);
 int passivesock(const char *service, const char *transport, int connections);
+void readHandler(int s);

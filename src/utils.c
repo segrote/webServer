@@ -92,6 +92,10 @@ int passivesock(const char *service, const char *transport, int connections)
 	if (s < 0)
 		perror("can't create socket because ");
 
+	/* set SO_REUSEADDR on a socket to true (1): */
+	int optval = 1;
+	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
     /* Bind the socket */
 	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
 		perror("can't bind to port because ");
@@ -103,4 +107,16 @@ int passivesock(const char *service, const char *transport, int connections)
     }
 
 	return s;
+}
+
+void readHandler(int s)
+{
+	ssize_t ssize;
+	char buffer[1000];
+
+	while ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//while we still read data from the client
+	{
+		printf("Got: %s\n", buffer);
+        printf("Buffer size of: %ld\n", strlen(buffer));
+	}
 }
