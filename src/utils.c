@@ -112,55 +112,110 @@ int passivesock(const char *service, const char *transport, int connections)
 void readHandler(int s)
 {
 	ssize_t ssize;
-	char buffer[1000];
+	char buffer[1024];
 
 	while ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//while we still read data from the client
 	{
+		printf("%s\n", buffer);
 		char *token = strtok(buffer, " ");
 
 		if (strcmp(token, "GET") == 0)		//GET request received
 		{
 			token = strtok(NULL, " ");		//get filename
 
-			if (strcmp(token, "/") == 0)	//get home.htm or default
+			const char *header = "HTTP/1.1 200 OK\r\n";
+			if (send(s, header, 18, 0) != 18)
 			{
-				FILE *file;
+				perror("Header write failed because ");
+				exit(4);
+			}			
 
-				if ((file = fopen("html/index.html", "r")) != NULL)
-				{
-					//write header
-					const char *header = "HTTP/1.1 200 OK\n\n";
-					if (send(s, header, sizeof(header), 0) != sizeof(header))
-					{
-						perror("Header write failed because ");
-						exit(4);
-					}
-					printf("%s", header);
-
-					const int SIZE = 1024;
-					char fileBuffer[SIZE];
-					while (fgets(fileBuffer, SIZE, file) != NULL)
-					{
-						printf("%s", fileBuffer);
-						if (send(s, fileBuffer, sizeof(fileBuffer), 0) != sizeof(fileBuffer))
-						{
-							perror("HTML File write failed because ");
-							exit(4);
-						}
-					}
-				} 
-				else
-				{
-					//error 404
-					const char *error = "HTTP/1.1 404 Not Found\n\n";
-
-					if (write(s, error, sizeof(error)) != sizeof(error))
-					{
-						perror("Error 404 write failed because ");
-						exit(4);
-					}
-				}
+			const char *contentType = "Content-Type: text/html\r\n";
+			if (send(s, contentType, 26, 0) != 26)
+			{
+				perror("ContentType write failed because ");
+				exit(4);
 			}
+
+			const char *characterReturn = "\r\n";
+			if (send(s, characterReturn, 3, 0) != 3)
+			{
+				perror("characterReturn write failed because ");
+				exit(4);
+			}
+
+			const char *site = "<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>";
+			if (send(s, site, 93, 0) != 93)
+			{
+				perror("site write failed because ");
+				exit(4);
+			}
+
+			// if (strcmp(token, "/") == 0)	//get home.htm or default
+			// {
+			// 	FILE *file;
+
+			// 	if ((file = fopen("html/home.htm", "r")) != NULL)
+			// 	{
+			// 		//write header
+			// 		const char *header = "HTTP/1.0 200 OK\n";
+			// 		if (write(s, header, sizeof(header)) != sizeof(header))
+			// 		{
+			// 			perror("Header write failed because ");
+			// 			exit(4);
+			// 		}
+
+			// 		const char *contentType = "Content-Type: text/html\n";
+			// 		if (write(s, contentType, sizeof(contentType)) != sizeof(contentType))
+			// 		{
+			// 			perror("ContentType write failed because ");
+			// 			exit(4);
+			// 		}
+
+
+			// 		fseek(file, 0, SEEK_END); 				// seek to end of file
+			// 		const int fileSize = ftell(file); 		// get current file pointer
+			// 		fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
+			// 		char *fileContents = malloc(fileSize);
+
+			// 		char contentLength[100] = "Content-Length: ";
+			// 		char length[10];
+			// 		sprintf(length, "%d", fileSize);
+			// 		strcat(contentLength, length);
+			// 		strcat(contentLength, "\n\n");
+			// 		if (write(s, contentLength, sizeof(contentLength)) != sizeof(contentLength))
+			// 		{
+			// 			perror("ContentLength write failed because ");
+			// 			exit(4);
+			// 		}
+
+			// 		if (fileContents)
+			// 		{
+			// 			fread(fileContents, 1, fileSize, file);
+			// 			printf("%s", fileContents);
+
+			// 			if (write(s, fileContents, sizeof(fileContents)) != sizeof(fileContents))
+			// 			{
+			// 				perror("HTML File write failed because ");
+			// 				exit(4);
+			// 			}
+
+			// 			free(fileContents);
+			// 		}
+			// 		// printf("%s", header);
+			// 	}
+			// 	else
+			// 	{
+			// 		//error 404
+			// 		const char *error = "HTTP/1.1 404 Not Found\r\n";
+
+			// 		if (write(s, error, sizeof(error)) != sizeof(error))
+			// 		{
+			// 			perror("Error 404 write failed because ");
+			// 			exit(4);
+			// 		}
+			// 	}
+			// }
 		}
 
 		//strtok to find file name
