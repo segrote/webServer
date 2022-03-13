@@ -116,7 +116,59 @@ void readHandler(int s)
 
 	while ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//while we still read data from the client
 	{
-		printf("Got: %s\n", buffer);
-        printf("Buffer size of: %ld\n", strlen(buffer));
+		char *token = strtok(buffer, " ");
+
+		if (strcmp(token, "GET") == 0)		//GET request received
+		{
+			token = strtok(NULL, " ");		//get filename
+
+			if (strcmp(token, "/") == 0)	//get home.htm or default
+			{
+				FILE *file;
+
+				if ((file = fopen("html/index.html", "r")) != NULL)
+				{
+					//write header
+					const char *header = "HTTP/1.1 200 OK\n\n";
+					if (send(s, header, sizeof(header), 0) != sizeof(header))
+					{
+						perror("Header write failed because ");
+						exit(4);
+					}
+					printf("%s", header);
+
+					const int SIZE = 1024;
+					char fileBuffer[SIZE];
+					while (fgets(fileBuffer, SIZE, file) != NULL)
+					{
+						printf("%s", fileBuffer);
+						if (send(s, fileBuffer, sizeof(fileBuffer), 0) != sizeof(fileBuffer))
+						{
+							perror("HTML File write failed because ");
+							exit(4);
+						}
+					}
+				} 
+				else
+				{
+					//error 404
+					const char *error = "HTTP/1.1 404 Not Found\n\n";
+
+					if (write(s, error, sizeof(error)) != sizeof(error))
+					{
+						perror("Error 404 write failed because ");
+						exit(4);
+					}
+				}
+			}
+		}
+
+		//strtok to find file name
+		//open filename
+		//if successfull, write header 
+		// HTTP/1.1 200 OK
+		// <CR> <CR>
+		//read from filename/open
+		//write to socket
 	}
 }

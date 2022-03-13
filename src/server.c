@@ -2,11 +2,10 @@
 
 int main(int argc, char *argv[])
 {
-    // argument handling
-    if(argc != 2)
+    if (argc != 2) // argument handling
     {
         printf("Usage: ./server [conf/configfile.conf]\n");
-        return 1;
+        exit(1);
     }
 
 	int simultaneousConnections, sockfd, connfd, len;
@@ -29,10 +28,8 @@ int main(int argc, char *argv[])
         if (connfd < 0)
         {
             perror("Server accept failed because ");
-            exit(1);
+            exit(3);
         }
-        else   
-            printf("Server accept\n");
             
         readHandler(connfd);
     }
