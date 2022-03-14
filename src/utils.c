@@ -137,14 +137,22 @@ void readHandler(int s)
 				exit(4);
 			}
 
-			const char *characterReturn = "\r\n";
-			if (send(s, characterReturn, 3, 0) != 3)
+			const char *contentLength = "Content-Length: 92\r\n";
+			if (send(s, contentLength, 21, 0) != 21)
 			{
-				perror("characterReturn write failed because ");
+				perror("contentLength write failed because ");
+				exit(4);
+			}
+
+			const char *characterReturns = "\r\n";
+			if (send(s, characterReturns, 3, 0) != 3)
+			{
+				perror("characterReturns write failed because ");
 				exit(4);
 			}
 
 			const char *site = "<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>";
+			// printf("%ld\n", strlen(site));
 			if (send(s, site, 93, 0) != 93)
 			{
 				perror("site write failed because ");
