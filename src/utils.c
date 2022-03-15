@@ -123,115 +123,181 @@ void readHandler(int s)
 		{
 			token = strtok(NULL, " ");		//get filename
 
-			const char *header = "HTTP/1.1 200 OK\r\n";
-			if (send(s, header, 18, 0) != 18)
+			if (strcmp(token, "/") == 0)	//get home.htm or default
 			{
-				perror("Header write failed because ");
-				exit(4);
-			}			
+				FILE *file;
 
-			const char *contentType = "Content-Type: text/html\r\n";
-			if (send(s, contentType, 26, 0) != 26)
-			{
-				perror("ContentType write failed because ");
-				exit(4);
+				if ((file = fopen("html/home.htm", "r")) != NULL)
+				{
+					//write header
+					const char *header = "HTTP/1.0 200 OK\r\n";
+					if (write(s, header, strlen(header)) != strlen(header))
+					{
+						perror("Header write failed because ");
+						exit(4);
+					}
+
+					const char *contentType = "Content-Type: text/html\r\n";
+					if (write(s, contentType, strlen(contentType)) != strlen(contentType))
+					{
+						perror("ContentType write failed because ");
+						exit(4);
+					}
+
+					fseek(file, 0, SEEK_END); 				// seek to end of file
+					const int fileSize = ftell(file); 		// get current file pointer
+					fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
+					char *fileContents = malloc(fileSize);
+
+					char contentLength[100] = "Content-Length: ";
+					char length[10];
+					sprintf(length, "%d", fileSize);
+					strcat(contentLength, length);
+					strcat(contentLength, "\r\n\r\n");
+					
+					if (write(s, contentLength, strlen(contentLength)) != strlen(contentLength))
+					{
+						perror("ContentLength write failed because ");
+						exit(4);
+					}
+
+					if (fileContents)
+					{
+						fread(fileContents, 1, fileSize, file);
+
+						if (write(s, fileContents, strlen(fileContents)) != strlen(fileContents))
+						{
+							perror("HTML File write failed because ");
+							exit(4);
+						}
+					}
+
+					free(fileContents);
+					fclose(file);
+				}
+				else
+				{
+					//error 404
+					const char *error = "HTTP/1.1 404 Not Found\r\n";
+
+					if (write(s, error, strlen(error)) != strlen(error))
+					{
+						perror("Error 404 write failed because ");
+						exit(4);
+					}
+				}
 			}
-
-			const char *contentLength = "Content-Length: 92\r\n";
-			if (send(s, contentLength, 21, 0) != 21)
+			else
 			{
-				perror("contentLength write failed because ");
-				exit(4);
+				FILE *file;
+				char *fileName = malloc(100);
+
+				if (strstr(token, "htm") != NULL)		//add html/ to input file name
+				{
+					strcat(fileName, "html/");
+					strcat(fileName, token);
+				} else
+				if (strstr(token, "gif") != NULL)
+				{
+					strcpy(fileName, token);
+					memmove(fileName, fileName+1, strlen(fileName));
+				} else
+					strcat(fileName, token);
+
+				printf("%s\n", fileName);
+
+				if ((file = fopen(fileName, "r")) != NULL)
+				{
+					//write header
+					const char *header = "HTTP/1.0 200 OK\r\n";
+					if (write(s, header, strlen(header)) != strlen(header))
+					{
+						perror("Header write failed because ");
+						exit(4);
+					}
+
+					if (strstr(token, "htm") != NULL)		//browser wants a .html file
+					{
+						const char *contentType = "Content-Type: text/html\r\n";
+						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
+						{
+							perror("ContentType write failed because ");
+							exit(4);
+						}
+					} else
+					if (strstr(token, "gif") != NULL)		//browser wants a .gif file
+					{
+						const char *contentType = "Content-Type: image/gif\r\n";
+						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
+						{
+							perror("ContentType write failed because ");
+							exit(4);
+						}
+					} else
+					if (strstr(token, "psd") != NULL)		//browser wants a .psd file
+					{
+						const char *contentType = "Content-Type: image/psd\r\n";
+						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
+						{
+							perror("ContentType write failed because ");
+							exit(4);
+						}
+					} else
+					if (strstr(token, "jpg") != NULL)		//browser wants a .jpg file
+					{
+						const char *contentType = "Content-Type: image/jpg\r\n";
+						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
+						{
+							perror("ContentType write failed because ");
+							exit(4);
+						}
+					}
+
+					fseek(file, 0, SEEK_END); 				// seek to end of file
+					const int fileSize = ftell(file); 		// get current file pointer
+					fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
+					char *fileContents = malloc(fileSize);
+
+					char contentLength[100] = "Content-Length: ";
+					char length[10];
+					sprintf(length, "%d", fileSize);
+					strcat(contentLength, length);
+					strcat(contentLength, "\r\n\r\n");
+
+					if (write(s, contentLength, strlen(contentLength)) != strlen(contentLength))
+					{
+						perror("ContentLength write failed because ");
+						exit(4);
+					}
+
+					if (fileContents)
+					{
+						fread(fileContents, 1, fileSize, file);
+
+						if (write(s, fileContents, strlen(fileContents)) != strlen(fileContents))
+						{
+							perror("Requested File write failed because ");
+							exit(4);
+						}
+					}
+
+					free(fileContents);
+					fclose(file);
+				}
+				else
+				{
+					//error 404
+					const char *error = "HTTP/1.1 404 Not Found\r\n";
+
+					if (write(s, error, strlen(error)) != strlen(error))
+					{
+						perror("Error 404 write failed because ");
+						exit(4);
+					}
+				}
+
+				free(fileName);
 			}
-
-			const char *characterReturns = "\r\n";
-			if (send(s, characterReturns, 3, 0) != 3)
-			{
-				perror("characterReturns write failed because ");
-				exit(4);
-			}
-
-			const char *site = "<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>";
-			// printf("%ld\n", strlen(site));
-			if (send(s, site, 93, 0) != 93)
-			{
-				perror("site write failed because ");
-				exit(4);
-			}
-
-			// if (strcmp(token, "/") == 0)	//get home.htm or default
-			// {
-			// 	FILE *file;
-
-			// 	if ((file = fopen("html/home.htm", "r")) != NULL)
-			// 	{
-			// 		//write header
-			// 		const char *header = "HTTP/1.0 200 OK\n";
-			// 		if (write(s, header, sizeof(header)) != sizeof(header))
-			// 		{
-			// 			perror("Header write failed because ");
-			// 			exit(4);
-			// 		}
-
-			// 		const char *contentType = "Content-Type: text/html\n";
-			// 		if (write(s, contentType, sizeof(contentType)) != sizeof(contentType))
-			// 		{
-			// 			perror("ContentType write failed because ");
-			// 			exit(4);
-			// 		}
-
-
-			// 		fseek(file, 0, SEEK_END); 				// seek to end of file
-			// 		const int fileSize = ftell(file); 		// get current file pointer
-			// 		fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
-			// 		char *fileContents = malloc(fileSize);
-
-			// 		char contentLength[100] = "Content-Length: ";
-			// 		char length[10];
-			// 		sprintf(length, "%d", fileSize);
-			// 		strcat(contentLength, length);
-			// 		strcat(contentLength, "\n\n");
-			// 		if (write(s, contentLength, sizeof(contentLength)) != sizeof(contentLength))
-			// 		{
-			// 			perror("ContentLength write failed because ");
-			// 			exit(4);
-			// 		}
-
-			// 		if (fileContents)
-			// 		{
-			// 			fread(fileContents, 1, fileSize, file);
-			// 			printf("%s", fileContents);
-
-			// 			if (write(s, fileContents, sizeof(fileContents)) != sizeof(fileContents))
-			// 			{
-			// 				perror("HTML File write failed because ");
-			// 				exit(4);
-			// 			}
-
-			// 			free(fileContents);
-			// 		}
-			// 		// printf("%s", header);
-			// 	}
-			// 	else
-			// 	{
-			// 		//error 404
-			// 		const char *error = "HTTP/1.1 404 Not Found\r\n";
-
-			// 		if (write(s, error, sizeof(error)) != sizeof(error))
-			// 		{
-			// 			perror("Error 404 write failed because ");
-			// 			exit(4);
-			// 		}
-			// 	}
-			// }
 		}
-
-		//strtok to find file name
-		//open filename
-		//if successfull, write header 
-		// HTTP/1.1 200 OK
-		// <CR> <CR>
-		//read from filename/open
-		//write to socket
 	}
 }

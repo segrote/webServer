@@ -1,3 +1,3 @@
 server
-src/utils.o
+/src/utils.o
 .vscode/
