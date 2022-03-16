@@ -200,11 +200,12 @@ void readHandler(int s)
 				if (strstr(token, "gif") != NULL)
 				{
 					strcpy(fileName, token);
-					memmove(fileName, fileName+1, strlen(fileName));
 				} else
 					strcat(fileName, token);
 
-				printf("%s\n", fileName);
+				// strcat(fileName, "\0");
+				printf("%ld\n", strlen(fileName));
+				// printf("%s\n", fileName);
 
 				if ((file = fopen(fileName, "r")) != NULL)
 				{
