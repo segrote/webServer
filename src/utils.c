@@ -19,7 +19,7 @@ void writeLineToFile(char *filepath, char *line)
         perror("ERROR can't write to the file because ");
 }
 
-void readConfigFile(char *inputFile, int *connections, char *root, char *index, char *port)
+void readConfigFile(char *inputFile, int *connections, char *port)
 {
 	FILE *configFile = fopen(inputFile, "r");
 	if (configFile == NULL)		//failed to open file
@@ -28,8 +28,8 @@ void readConfigFile(char *inputFile, int *connections, char *root, char *index, 
 		exit(1);
 	}
 
-	char *line = (char *)malloc(sizeof(char) * 100);
 	size_t len = 100;
+	char *line = (char *)malloc(sizeof(char) * len);
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read # connections
 	{
@@ -38,12 +38,20 @@ void readConfigFile(char *inputFile, int *connections, char *root, char *index, 
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read rootDirectory
 	{
-		strcpy(root, line);
+		int length = strlen(line);
+		if (length > 0 && line[length-1] == '\n')
+			line[length-1] = '/';
+
+		strcpy(rootDirectory, line);
 	}
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read indexFileName
 	{
-		strcpy(index, line);
+		int length = strlen(line);
+		if (length > 0 && line[length-1] == '\n')
+			line[length-1] = '\0';
+
+		strcpy(indexFileName, line);
 	}
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read port number
@@ -109,25 +117,31 @@ int passivesock(const char *service, const char *transport, int connections)
 	return s;
 }
 
-void readHandler(int s)
+void *readHandler(void *arg)
 {
+	int s = *(int*) arg;
 	ssize_t ssize;
 	char buffer[1024];
+	char *rest;
 
-	while ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//while we still read data from the client
+	if ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//if we can read data from the client
 	{
 		printf("%s\n", buffer);
-		char *token = strtok(buffer, " ");
+		char *token = strtok_r(buffer, " ", &rest);
 
 		if (strcmp(token, "GET") == 0)		//GET request received
 		{
-			token = strtok(NULL, " ");		//get filename
+			token = strtok_r(NULL, " ", &rest);		//get filename
 
 			if (strcmp(token, "/") == 0)	//get home.htm or default
 			{
 				FILE *file;
 
-				if ((file = fopen("html/home.htm", "r")) != NULL)
+				// char index[100]; bzero(index, 100);
+				// strcat(index, indexFileName);
+				// printf("%s", index);
+
+				if ((file = fopen("index.htm", "r")) != NULL)
 				{
 					//write header
 					const char *header = "HTTP/1.0 200 OK\r\n";
@@ -153,11 +167,18 @@ void readHandler(int s)
 					char length[10];
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
-					strcat(contentLength, "\r\n\r\n");
+					strcat(contentLength, "\r\n");
 					
 					if (write(s, contentLength, strlen(contentLength)) != strlen(contentLength))
 					{
 						perror("ContentLength write failed because ");
+						exit(4);
+					}
+
+					const char *connectionStatus = "Connection: close\r\n\r\n";
+					if (write(s, connectionStatus, strlen(connectionStatus)) != strlen(connectionStatus))
+					{
+						perror("connectionStatus write failed because ");
 						exit(4);
 					}
 
@@ -189,25 +210,19 @@ void readHandler(int s)
 			}
 			else
 			{
-				FILE *file;
+				FILE *requestedFile;
 				char *fileName = malloc(100);
 
 				if (strstr(token, "htm") != NULL)		//add html/ to input file name
 				{
 					strcat(fileName, "html/");
-					strcat(fileName, token);
-				} else
-				if (strstr(token, "gif") != NULL)
-				{
-					strcpy(fileName, token);
-				} else
-					strcat(fileName, token);
+				}
 
-				// strcat(fileName, "\0");
-				printf("%ld\n", strlen(fileName));
-				// printf("%s\n", fileName);
-
-				if ((file = fopen(fileName, "r")) != NULL)
+				strcat(fileName, token);
+				memmove(fileName, fileName+1, strlen(fileName));
+				fileName[strlen(fileName)] = '\0';
+		
+				if ((requestedFile = fopen(fileName, "r")) != NULL)
 				{
 					//write header
 					const char *header = "HTTP/1.0 200 OK\r\n";
@@ -235,18 +250,9 @@ void readHandler(int s)
 							exit(4);
 						}
 					} else
-					if (strstr(token, "psd") != NULL)		//browser wants a .psd file
-					{
-						const char *contentType = "Content-Type: image/psd\r\n";
-						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
-						{
-							perror("ContentType write failed because ");
-							exit(4);
-						}
-					} else
 					if (strstr(token, "jpg") != NULL)		//browser wants a .jpg file
 					{
-						const char *contentType = "Content-Type: image/jpg\r\n";
+						const char *contentType = "Content-Type: image/jpeg\r\n";
 						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
 						{
 							perror("ContentType write failed because ");
@@ -254,16 +260,16 @@ void readHandler(int s)
 						}
 					}
 
-					fseek(file, 0, SEEK_END); 				// seek to end of file
-					const int fileSize = ftell(file); 		// get current file pointer
-					fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
+					fseek(requestedFile, 0, SEEK_END); 				// seek to end of file
+					const int fileSize = ftell(requestedFile); 		// get current file pointer
+					fseek(requestedFile, 0, SEEK_SET); 				// seek back to beginning of file
 					char *fileContents = malloc(fileSize);
 
-					char contentLength[100] = "Content-Length: ";
-					char length[10];
+					char contentLength[1000] = "Content-Length: ";
+					char length[900];
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
-					strcat(contentLength, "\r\n\r\n");
+					strcat(contentLength, "\r\n");
 
 					if (write(s, contentLength, strlen(contentLength)) != strlen(contentLength))
 					{
@@ -271,9 +277,16 @@ void readHandler(int s)
 						exit(4);
 					}
 
-					if (fileContents)
+					const char *connectionStatus = "Connection: close\r\n\r\n";
+					if (write(s, connectionStatus, strlen(connectionStatus)) != strlen(connectionStatus))
 					{
-						fread(fileContents, 1, fileSize, file);
+						perror("connectionStatus write failed because ");
+						exit(4);
+					}
+
+					if (fileContents > 0)
+					{
+						fread(fileContents, 1, fileSize, requestedFile);
 
 						if (write(s, fileContents, strlen(fileContents)) != strlen(fileContents))
 						{
@@ -283,7 +296,7 @@ void readHandler(int s)
 					}
 
 					free(fileContents);
-					fclose(file);
+					fclose(requestedFile);
 				}
 				else
 				{
