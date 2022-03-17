@@ -163,8 +163,8 @@ void *readHandler(void *arg)
 					fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
 					char *fileContents = malloc(fileSize);
 
-					char contentLength[100] = "Content-Length: ";
-					char length[10];
+					char contentLength[200] = "Content-Length: ";
+					char length[100];
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
 					strcat(contentLength, "\r\n");
@@ -212,18 +212,24 @@ void *readHandler(void *arg)
 			{
 				FILE *requestedFile;
 				char *fileName = malloc(100);
+				char readFlag[5] = "r";
 
 				if (strstr(token, "htm") != NULL)		//add html/ to input file name
 				{
 					strcat(fileName, "html/");
-				}
+				} else
+				if (strstr(token, "gif") != NULL)
+					strcpy(readFlag, "rb");
 
 				strcat(fileName, token);
 				memmove(fileName, fileName+1, strlen(fileName));
 				fileName[strlen(fileName)] = '\0';
-		
-				if ((requestedFile = fopen(fileName, "r")) != NULL)
+				// printf("%s", fileName);
+				printf("%s\n", readFlag);
+
+				if ((requestedFile = fopen(fileName, readFlag)) != NULL)
 				{
+					// printf("file was opened!\n");
 					//write header
 					const char *header = "HTTP/1.0 200 OK\r\n";
 					if (write(s, header, strlen(header)) != strlen(header))
@@ -265,8 +271,8 @@ void *readHandler(void *arg)
 					fseek(requestedFile, 0, SEEK_SET); 				// seek back to beginning of file
 					char *fileContents = malloc(fileSize);
 
-					char contentLength[1000] = "Content-Length: ";
-					char length[900];
+					char contentLength[100] = "Content-Length: ";
+					char length[80];
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
 					strcat(contentLength, "\r\n");
