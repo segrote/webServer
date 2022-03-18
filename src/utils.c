@@ -12,11 +12,17 @@ void writeLineToFile(char *filepath, char *line)
 {
     int fd = open(filepath, O_CREAT, O_WRONLY, O_APPEND, 0777);
     if (fd < 0)
-        perror("ERROR can't open the file because ");
+	{
+        perror("Can't open the file because ");
+		fflush(stderr);
+	}
 
     int ret = write(fd, line, strlen(line));
     if (ret < 0)
-        perror("ERROR can't write to the file because ");
+	{
+        perror("Can't write to the file because ");
+		fflush(stderr);
+	}
 }
 
 void readConfigFile(char *inputFile, int *connections, char *port)
@@ -25,6 +31,7 @@ void readConfigFile(char *inputFile, int *connections, char *port)
 	if (configFile == NULL)		//failed to open file
 	{
 		perror("Couldn't open configFile ");
+		fflush(stderr);
 		exit(1);
 	}
 
@@ -34,6 +41,10 @@ void readConfigFile(char *inputFile, int *connections, char *port)
 	if (getLineFromFile(configFile, line, len) != -1)		//read # connections
 	{
 		sscanf(line, "%d", *&connections);
+	} else
+	{
+		perror("Can't get line from config file because ");
+		fflush(stderr);
 	}
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read rootDirectory
@@ -43,6 +54,10 @@ void readConfigFile(char *inputFile, int *connections, char *port)
 			line[length-1] = '/';
 
 		strcpy(rootDirectory, line);
+	} else
+	{
+		perror("Can't get line from config file because ");
+		fflush(stderr);
 	}
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read indexFileName
@@ -52,12 +67,20 @@ void readConfigFile(char *inputFile, int *connections, char *port)
 			line[length-1] = '\0';
 
 		strcpy(indexFileName, line);
+	} else
+	{
+		perror("Can't get line from config file because ");
+		fflush(stderr);
 	}
 
 	if (getLineFromFile(configFile, line, len) != -1)		//read port number
 	{
 		strcpy(port, line);
-	}	
+	} else
+	{
+		perror("Can't get line from config file because ");
+		fflush(stderr);
+	}
 
 	free(line);
 }
@@ -83,11 +106,17 @@ int passivesock(const char *service, const char *transport, int connections)
 	if ( pse = getservbyname(service, transport) )
 		sin.sin_port = htons(ntohs((unsigned short)pse->s_port));
 	else if ((sin.sin_port=htons((unsigned short)atoi(service))) == 0)
-		perror("can't get service entry because ");
+	{
+		perror("Can't get service entry because ");
+		fflush(stderr);
+	}
 
     /* Map protocol name to protocol number */
 	if ( (ppe = getprotobyname(transport)) == 0)
-		perror("can't get protocol entry because ");
+	{
+		perror("Can't get protocol entry because ");
+		fflush(stderr);
+	}
 
     /* Use protocol to choose a socket type */
 	if (strcmp(transport, "udp") == 0)
@@ -98,41 +127,58 @@ int passivesock(const char *service, const char *transport, int connections)
     /* Allocate a socket */
 	s = socket(PF_INET, type, ppe->p_proto);
 	if (s < 0)
-		perror("can't create socket because ");
+	{
+		perror("Can't create socket because ");
+		fflush(stderr);
+	}
 
 	/* set SO_REUSEADDR on a socket to true (1): */
 	int optval = 1;
-	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
+	{
+		perror("Can't set sockopt because ");
+		fflush(stderr);
+	}
 
     /* Bind the socket */
 	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
-		perror("can't bind to port because ");
+	{
+		perror("Can't bind to port because ");
+		fflush(stderr);
+	}
 
 	if ((listen(s, connections)) != 0)
     {
         perror("Listen failed because ");
-        exit(2);
+        fflush(stderr);
     }
 
 	return s;
+}
+
+void accessLog(char *header)
+{
+	//decrypt header to common log format
+
+	printf("%s", header);		//I got busy :D
 }
 
 void *readHandler(void *arg)
 {
 	int s = *(int*) arg;
 	ssize_t ssize;
-	char buffer[1024];
+	char buffer[8190];
 	char *rest;
 
 	if ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//if we can read data from the client
 	{
-		printf("%s\n", buffer);
+		accessLog(buffer);
 		char *token = strtok_r(buffer, " ", &rest);
 
 		if (strcmp(token, "GET") == 0)		//GET request received
 		{
 			token = strtok_r(NULL, " ", &rest);		//get filename
-			printf("%s\n", token);
+			// printf("%s\n", token);
 
 			if (strstr(token, "cgi") != NULL)		//get CGI query
 			{
@@ -143,17 +189,14 @@ void *readHandler(void *arg)
 			{
 				FILE *file;
 
-				// char index[100]; bzero(index, 100);
-				// strcat(index, indexFileName);
-				// printf("%s", index);
-
-				if ((file = fopen("index.htm", "r")) != NULL)
+				if ((file = fopen(indexFileName, "r")) != NULL)
 				{
 					//write header
 					const char *header = "HTTP/1.0 200 OK\r\n";
 					if (write(s, header, strlen(header)) != strlen(header))
 					{
 						perror("Header write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
@@ -161,16 +204,33 @@ void *readHandler(void *arg)
 					if (write(s, contentType, strlen(contentType)) != strlen(contentType))
 					{
 						perror("ContentType write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
-					fseek(file, 0, SEEK_END); 				// seek to end of file
-					const int fileSize = ftell(file); 		// get current file pointer
-					fseek(file, 0, SEEK_SET); 				// seek back to beginning of file
-					char *fileContents = malloc(fileSize);
+					if (fseek(file, 0, SEEK_END) == -1) 				// seek to end of file
+					{
+						perror("Requested file fseek failed because ");
+						fflush(stderr);
+					}
 
-					char contentLength[200] = "Content-Length: ";
-					char length[100];
+					const int fileSize = ftell(file); 		// get current file pointer
+					if (fileSize == -1)
+					{
+						perror("Requested file ftell failed because ");
+						fflush(stderr);
+					}
+
+					if (fseek(file, 0, SEEK_SET) == -1) 				// seek back to beginning of file
+					{
+						perror("Requested file fseek failed because ");
+						fflush(stderr);
+					}
+
+					char *fileContents = malloc(fileSize); bzero(fileContents, fileSize);
+					char contentLength[200]; bzero(contentLength, 200);
+					strcat(contentLength, "Content-Length: ");
+					char length[100]; bzero(length, 100);
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
 					strcat(contentLength, "\r\n");
@@ -178,6 +238,7 @@ void *readHandler(void *arg)
 					if (write(s, contentLength, strlen(contentLength)) != strlen(contentLength))
 					{
 						perror("ContentLength write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
@@ -185,6 +246,7 @@ void *readHandler(void *arg)
 					if (write(s, connectionStatus, strlen(connectionStatus)) != strlen(connectionStatus))
 					{
 						perror("connectionStatus write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
@@ -195,6 +257,7 @@ void *readHandler(void *arg)
 						if (write(s, fileContents, fileSize) != fileSize)
 						{
 							perror("HTML File write failed because ");
+							fflush(stderr);
 							exit(4);
 						}
 					}
@@ -210,6 +273,7 @@ void *readHandler(void *arg)
 					if (write(s, error, strlen(error)) != strlen(error))
 					{
 						perror("Error 404 write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 				}
@@ -217,17 +281,16 @@ void *readHandler(void *arg)
 			else
 			{
 				FILE *requestedFile;
-				char *fileName = malloc(100);
-				bzero(fileName, 100);
+				char *fileName = malloc(200); bzero(fileName, 200);
 				char readFlag[5] = "r";
 
-				if (strstr(token, "htm") != NULL)		//add html/ to input file name
+				if (strstr(token, "htm") != NULL)		//add rootDirectory/ to input file name
 				{
 					char *temp = malloc(strlen(token));
 					strcat(temp, token);
 					memmove(temp, temp+1, strlen(temp));
 					temp[strlen(temp)] = '\0';
-					strcat(fileName, "html/");
+					strcat(fileName, rootDirectory);
 					strcat(fileName, temp);
 					free(temp);
 				} else
@@ -237,13 +300,13 @@ void *readHandler(void *arg)
 
 					if (strstr(token, "images") == NULL)		//add images/ to input file name
 					{
-						char *temp = malloc(strlen(token));
-						strcat(temp, token);
+						char *tempVar = malloc(strlen(token));
+						strcat(tempVar, token);
 						memmove(fileName, fileName+1, strlen(fileName));
-						temp[strlen(temp)] = '\0';
+						tempVar[strlen(tempVar)] = '\0';
 						strcat(fileName, "images/");
-						strcat(fileName, temp);
-						free(temp);
+						strcat(fileName, tempVar);
+						free(tempVar);
 					}
 					else
 					{
@@ -260,6 +323,7 @@ void *readHandler(void *arg)
 					if (write(s, header, strlen(header)) != strlen(header))
 					{
 						perror("Header write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
@@ -269,6 +333,7 @@ void *readHandler(void *arg)
 						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
 						{
 							perror("ContentType write failed because ");
+							fflush(stderr);
 							exit(4);
 						}
 					} else
@@ -278,6 +343,7 @@ void *readHandler(void *arg)
 						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
 						{
 							perror("ContentType write failed because ");
+							fflush(stderr);
 							exit(4);
 						}
 					} else
@@ -287,17 +353,34 @@ void *readHandler(void *arg)
 						if (write(s, contentType, strlen(contentType)) != strlen(contentType))
 						{
 							perror("ContentType write failed because ");
+							fflush(stderr);
 							exit(4);
 						}
 					}
 
-					fseek(requestedFile, 0, SEEK_END); 				// seek to end of file
-					const int fileSize = ftell(requestedFile); 		// get current file pointer
-					fseek(requestedFile, 0, SEEK_SET); 				// seek back to beginning of file
-					char *fileContents = malloc(fileSize);
+					if (fseek(requestedFile, 0, SEEK_END) == -1) 				// seek to end of file
+					{
+						perror("Requested file fseek failed because ");
+						fflush(stderr);
+					}
 
-					char contentLength[400] = "Content-Length: ";
-					char length[350];
+					const int fileSize = ftell(requestedFile); 		// get current file pointer
+					if (fileSize == -1)
+					{
+						perror("Requested file ftell failed because ");
+						fflush(stderr);
+					}
+
+					if (fseek(requestedFile, 0, SEEK_SET) == -1) 				// seek back to beginning of file
+					{
+						perror("Requested file fseek failed because ");
+						fflush(stderr);
+					}
+
+					char *fileCon = malloc(fileSize); bzero(fileCon, fileSize);
+					char contentLength[400]; bzero(contentLength, 400);
+					strcat(contentLength, "Content-Length: ");
+					char length[350]; bzero(length, 350);
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
 					strcat(contentLength, "\r\n");
@@ -305,6 +388,7 @@ void *readHandler(void *arg)
 					if (write(s, contentLength, strlen(contentLength)) != strlen(contentLength))
 					{
 						perror("ContentLength write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
@@ -312,21 +396,23 @@ void *readHandler(void *arg)
 					if (write(s, connectionStatus, strlen(connectionStatus)) != strlen(connectionStatus))
 					{
 						perror("connectionStatus write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 
-					if (fileContents > 0)
+					if (fileCon > 0)
 					{
-						fread(fileContents, 1, fileSize, requestedFile);
+						fread(fileCon, 1, fileSize, requestedFile);
 
-						if (write(s, fileContents, fileSize) != fileSize)
+						if (write(s, fileCon, fileSize) != fileSize)
 						{
 							perror("Requested File write failed because ");
+							fflush(stderr);
 							exit(4);
 						}
 					}
 
-					free(fileContents);
+					free(fileCon);
 					fclose(requestedFile);
 				}
 				else
@@ -337,6 +423,7 @@ void *readHandler(void *arg)
 					if (write(s, error, strlen(error)) != strlen(error))
 					{
 						perror("Error 404 write failed because ");
+						fflush(stderr);
 						exit(4);
 					}
 				}
@@ -352,5 +439,9 @@ void *readHandler(void *arg)
 
 			
 		}
+	} else
+	{
+		perror("Can't read data from the client because ");
+		fflush(stderr);
 	}
 }
