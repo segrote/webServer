@@ -216,20 +216,26 @@ void *readHandler(void *arg)
 
 				if (strstr(token, "htm") != NULL)		//add html/ to input file name
 				{
+					char temp[100];
+					strcat(temp, token);
+					memmove(temp, temp+1, strlen(temp));
+					temp[strlen(temp)] = '\0';
 					strcat(fileName, "html/");
+					strcat(fileName, temp);
 				} else
-				if (strstr(token, "gif") != NULL)
+				if (strstr(token, "gif") != NULL || strstr(token, "jpg") != NULL)
+				{
 					strcpy(readFlag, "rb");
+					strcat(fileName, token);
+					memmove(fileName, fileName+1, strlen(fileName));
+					fileName[strlen(fileName)] = '\0';
+				}
 
-				strcat(fileName, token);
-				memmove(fileName, fileName+1, strlen(fileName));
-				fileName[strlen(fileName)] = '\0';
-				// printf("%s", fileName);
+				printf("%s\n", fileName);
 				printf("%s\n", readFlag);
 
 				if ((requestedFile = fopen(fileName, readFlag)) != NULL)
 				{
-					// printf("file was opened!\n");
 					//write header
 					const char *header = "HTTP/1.0 200 OK\r\n";
 					if (write(s, header, strlen(header)) != strlen(header))
@@ -271,8 +277,8 @@ void *readHandler(void *arg)
 					fseek(requestedFile, 0, SEEK_SET); 				// seek back to beginning of file
 					char *fileContents = malloc(fileSize);
 
-					char contentLength[100] = "Content-Length: ";
-					char length[80];
+					char contentLength[400] = "Content-Length: ";
+					char length[350];
 					sprintf(length, "%d", fileSize);
 					strcat(contentLength, length);
 					strcat(contentLength, "\r\n");
@@ -294,7 +300,7 @@ void *readHandler(void *arg)
 					{
 						fread(fileContents, 1, fileSize, requestedFile);
 
-						if (write(s, fileContents, strlen(fileContents)) != strlen(fileContents))
+						if (write(s, fileContents, fileSize) != fileSize)
 						{
 							perror("Requested File write failed because ");
 							exit(4);
