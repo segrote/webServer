@@ -11,3 +11,6 @@ $(SRCDIR)/utils.o: $(SRCDIR)/utils.c
 
 clean: 
 	rm server $(SRCDIR)/utils.o
+
+run:
+	./server conf/httpd.conf

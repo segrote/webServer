@@ -132,6 +132,12 @@ void *readHandler(void *arg)
 		if (strcmp(token, "GET") == 0)		//GET request received
 		{
 			token = strtok_r(NULL, " ", &rest);		//get filename
+			printf("%s\n", token);
+
+			if (strstr(token, "cgi") != NULL)		//get CGI query
+			{
+				//token will have "/test.cgi?first=sever&second=grote&Submit=Submit+Query"
+			}
 
 			if (strcmp(token, "/") == 0)	//get home.htm or default
 			{
@@ -186,7 +192,7 @@ void *readHandler(void *arg)
 					{
 						fread(fileContents, 1, fileSize, file);
 
-						if (write(s, fileContents, strlen(fileContents)) != strlen(fileContents))
+						if (write(s, fileContents, fileSize) != fileSize)
 						{
 							perror("HTML File write failed because ");
 							exit(4);
@@ -212,27 +218,40 @@ void *readHandler(void *arg)
 			{
 				FILE *requestedFile;
 				char *fileName = malloc(100);
+				bzero(fileName, 100);
 				char readFlag[5] = "r";
 
 				if (strstr(token, "htm") != NULL)		//add html/ to input file name
 				{
-					char temp[100];
+					char *temp = malloc(strlen(token));
 					strcat(temp, token);
 					memmove(temp, temp+1, strlen(temp));
 					temp[strlen(temp)] = '\0';
 					strcat(fileName, "html/");
 					strcat(fileName, temp);
+					free(temp);
 				} else
 				if (strstr(token, "gif") != NULL || strstr(token, "jpg") != NULL)
 				{
 					strcpy(readFlag, "rb");
-					strcat(fileName, token);
-					memmove(fileName, fileName+1, strlen(fileName));
-					fileName[strlen(fileName)] = '\0';
-				}
 
-				printf("%s\n", fileName);
-				printf("%s\n", readFlag);
+					if (strstr(token, "images") == NULL)		//add images/ to input file name
+					{
+						char *temp = malloc(strlen(token));
+						strcat(temp, token);
+						memmove(fileName, fileName+1, strlen(fileName));
+						temp[strlen(temp)] = '\0';
+						strcat(fileName, "images/");
+						strcat(fileName, temp);
+						free(temp);
+					}
+					else
+					{
+						strcat(fileName, token);
+						memmove(fileName, fileName+1, strlen(fileName));
+						fileName[strlen(fileName)] = '\0';
+					}
+				}
 
 				if ((requestedFile = fopen(fileName, readFlag)) != NULL)
 				{
@@ -324,6 +343,14 @@ void *readHandler(void *arg)
 
 				free(fileName);
 			}
+		}
+		else
+		if (strcmp(token, "POST") == 0)
+		{
+			token = strtok_r(NULL, " ", &rest);		//get filename
+			// token should have "/POST.cgi"
+
+			
 		}
 	}
 }
