@@ -1,3 +1,5 @@
 server
 /src/utils.o
 .vscode/
+/logs/httpd-access.log
+/logs/httpd-error.log

@@ -160,7 +160,7 @@ void accessLog(char *header)
 {
 	//decrypt header to common log format
 
-	printf("%s", header);		//I got busy :D
+	printf("%s", header);		//I got busy :(
 }
 
 void *readHandler(void *arg)
@@ -178,11 +178,46 @@ void *readHandler(void *arg)
 		if (strcmp(token, "GET") == 0)		//GET request received
 		{
 			token = strtok_r(NULL, " ", &rest);		//get filename
-			// printf("%s\n", token);
 
 			if (strstr(token, "cgi") != NULL)		//get CGI query
 			{
-				//token will have "/test.cgi?first=sever&second=grote&Submit=Submit+Query"
+				// char *tok = malloc(strlen(token));
+				// char *name = malloc(strlen(tok) - 9);
+				// strcpy(tok, token);
+				// strncpy(name, &tok[8], strlen(name));
+				// printf("%s\n", tok);
+				//string after 18th character is our requested file
+
+				// if (setenv("QUERY_STRING", newQueryString, 1) == -1)
+				// {
+				// 	perror("setenv failed because ");
+				// 	fflush(stderr);
+				// }
+
+				// free(tok);
+				// free(name);
+
+				// close(1);		//close stdout
+				// dup2(s, 1);		//copy client to stdout
+
+				// if (fork() == 0)	//child process
+				// {
+				// 	if (execv("/bin/sh", "cgi-bin/getFile.sh") == -1)	// test for execv fail
+				// 	{
+				// 		//error 500
+				// 		const char *error = "HTTP/1.1 500 Internal Server Error\r\n";
+
+				// 		if (write(s, error, strlen(error)) != strlen(error))
+				// 		{
+				// 			perror("Error 500 write failed because ");
+				// 			fflush(stderr);
+				// 			exit(4);
+				// 		}
+				// 	} else		//write header
+				// 	{
+				// 		printf("Content-Type: text/html\r\n\r\n");
+				// 	}
+				// }
 			}
 
 			if (strcmp(token, "/") == 0)	//get home.htm or default

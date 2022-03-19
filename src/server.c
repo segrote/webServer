@@ -9,11 +9,11 @@ int main(int argc, char *argv[])
     }
 
     //map stdout to access log file and stderr to error log file
-    if (freopen("logs/httpd-access.log", "w", stdout) == NULL || freopen("logs/httpd-error.log", "w", stderr) == NULL)
-    {
-        printf("Can't map std streams to log file\n");
-        exit(2);
-    }
+    // if (freopen("logs/httpd-access.log", "w", stdout) == NULL || freopen("logs/httpd-error.log", "w", stderr) == NULL)
+    // {
+    //     printf("Can't map std streams to log file\n");
+    //     exit(2);
+    // }
 
 	int simultaneousConnections, sockfd, connfd, len;
 	char portNumber[10], *inputFile = argv[1];
