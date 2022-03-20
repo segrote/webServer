@@ -1,9 +1,14 @@
 #!/bin/bash
 
-a=${QUERY_STRING//&/;}
-b=${QUERY_STRING//&/;}
+saveIFS=$IFS
+IFS='=&'
+parm=($QUERY_STRING)
+IFS=$saveIFS
+a=$parm[1]
+b=$parm[3]
 VAR="$a$b"
 
+echo 'Content-Type: text/html\r\n\r\n'
 echo '<!DOCTYPE html>'
 echo '<html>'
 echo '<head>'
