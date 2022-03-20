@@ -181,46 +181,45 @@ void *readHandler(void *arg)
 
 			if (strstr(token, "cgi") != NULL)		//get CGI query
 			{
-				// char *tok = malloc(strlen(token));
-				// char *name = malloc(strlen(tok) - 9);
-				// strcpy(tok, token);
-				// strncpy(name, &tok[8], strlen(name));
-				// printf("%s\n", tok);
+				char *tok = malloc(strlen(token));
+				strcpy(tok, token);
+				char *name = malloc(strlen(tok) - 18);
+				strncpy(name, &tok[18], strlen(tok) - 18);
 				//string after 18th character is our requested file
 
-				// if (setenv("QUERY_STRING", newQueryString, 1) == -1)
-				// {
-				// 	perror("setenv failed because ");
-				// 	fflush(stderr);
-				// }
+				if (setenv("QUERY_STRING", name, 1) == -1)
+				{
+					perror("setenv failed because ");
+					fflush(stderr);
+				}
 
-				// free(tok);
-				// free(name);
+				free(tok);
+				free(name);
 
-				// close(1);		//close stdout
-				// dup2(s, 1);		//copy client to stdout
+				printf("forking!\n");
+				fflush(stdout);
+				close(1);		//close stdout
+				dup2(s, 1);		//copy client to stdout
 
-				// if (fork() == 0)	//child process
-				// {
-				// 	if (execv("/bin/sh", "cgi-bin/getFile.sh") == -1)	// test for execv fail
-				// 	{
-				// 		//error 500
-				// 		const char *error = "HTTP/1.1 500 Internal Server Error\r\n";
+				if (fork() == 0)	//child process
+				{
+					char *temp[] = {"cgi-bin/./getFile.sh", NULL};
+					if (execv("/bin/bash", temp) == -1)	// test for execv fail
+					{
+						//error 500
+						const char *error = "HTTP/1.1 500 Internal Server Error\r\n";
 
-				// 		if (write(s, error, strlen(error)) != strlen(error))
-				// 		{
-				// 			perror("Error 500 write failed because ");
-				// 			fflush(stderr);
-				// 			exit(4);
-				// 		}
-				// 	} else		//write header
-				// 	{
-				// 		printf("Content-Type: text/html\r\n\r\n");
-				// 	}
-				// }
-			}
+						if (write(s, error, strlen(error)) != strlen(error))
+						{
+							perror("Error 500 write failed because ");
+							fflush(stderr);
+							exit(4);
+						}
+					}
+				}
+			} else
 
-			if (strcmp(token, "/") == 0)	//get home.htm or default
+			if (strcmp(token, "/") == 0)	//get index.htm or default
 			{
 				FILE *file;
 
@@ -469,10 +468,49 @@ void *readHandler(void *arg)
 		else
 		if (strcmp(token, "POST") == 0)
 		{
-			token = strtok_r(NULL, " ", &rest);		//get filename
-			// token should have "/POST.cgi"
+			token = strtok_r(NULL, " ", &rest);
 
-			
+			while (token != NULL)
+			{
+				if (strstr(token, "First="))		//query
+				{
+					char *tok = malloc(strlen(token));
+					strcpy(tok, token);
+					printf("%s\n", tok);
+
+					if (setenv("QUERY_STRING", tok, 1) == -1)
+					{
+						perror("setenv failed because ");
+						fflush(stderr);
+					}
+
+					free(tok);
+
+					printf("forking!\n");
+					fflush(stdout);
+					close(1);		//close stdout
+					dup2(s, 1);		//copy client to stdout
+
+					if (fork() == 0)	//child process
+					{
+						char *temp[] = {"cgi-bin/./sum.sh", NULL};
+						if (execv("/bin/bash", temp) == -1)	// test for execv fail
+						{
+							//error 500
+							const char *error = "HTTP/1.1 500 Internal Server Error\r\n";
+
+							if (write(s, error, strlen(error)) != strlen(error))
+							{
+								perror("Error 500 write failed because ");
+								fflush(stderr);
+								exit(4);
+							}
+						}
+					}
+				}
+				
+				token = strtok_r(NULL, " ", &rest);
+			}
 		}
 	} else
 	{
