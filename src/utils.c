@@ -200,8 +200,9 @@ void *readHandler(void *arg)
 				fflush(stdout);
 				close(1);		//close stdout
 				dup2(s, 1);		//copy client to stdout
-
-				if (fork() == 0)	//child process
+				
+				int i = fork();
+				if (i == 0)	//child process
 				{
 					char *temp[] = {"cgi-bin/./getFile.sh", NULL};
 					if (execv("/bin/bash", temp) == -1)	// test for execv fail
@@ -216,6 +217,11 @@ void *readHandler(void *arg)
 							exit(4);
 						}
 					}
+				} else
+
+				if (i == 1) //parent process
+				{
+					close(s);
 				}
 			} else
 
@@ -491,7 +497,8 @@ void *readHandler(void *arg)
 					close(1);		//close stdout
 					dup2(s, 1);		//copy client to stdout
 
-					if (fork() == 0)	//child process
+					int i = fork();
+					if (i == 0)	//child process
 					{
 						char *temp[] = {"cgi-bin/./sum.sh", NULL};
 						if (execv("/bin/bash", temp) == -1)	// test for execv fail
@@ -506,6 +513,10 @@ void *readHandler(void *arg)
 								exit(4);
 							}
 						}
+					} else
+					if (i == 1) //parent process
+					{
+						close(s);
 					}
 				}
 				
