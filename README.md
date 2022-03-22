@@ -9,12 +9,15 @@ March 22, 2022
 ## Usage
 
 To run my Web Server first ensure you are in the root directory of the project (/webServer) and then run
+
 '''
 make
 '''
+
 to build the object files and link everything together. The server can then be started using ./server
 followed by the path to the config file. This command is also included in the makefile which can be 
 accessed using
+
 '''
 make run
 '''
