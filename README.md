@@ -35,4 +35,7 @@ of the scrollable pane. A picture below is included for reference in locating th
 
 My HTTP 1.0 Web Server is complete with request/response HTML and graphics functionality, concurrency in
 the form of threading, CGI Get and Post responsing, logging, and a basic config file for quickly changing
-server parameters. In my testing using firefox everything functioned correctly with no issues.
+server parameters. In my testing using firefox everything functioned correctly with no issues. I do however 
+randomly get some buffer overflows randomly when trying to read from the client which I thought was strange
+since I am using a buffer size of 8190 bytes like apache server.. Sometimes I get this issue and sometimes
+I do not (hopefully not for you)
