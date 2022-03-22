@@ -170,8 +170,9 @@ void *readHandler(void *arg)
 	char buffer[8190];
 	bzero(buffer, 8190);
 	char *rest;
+	ssize = read(s, &buffer, sizeof(buffer));
 
-	if ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//if we can read data from the client
+	if ((ssize) > 0 && ssize < 8190)		//if we can read data from the client
 	{
 		accessLog(buffer);
 		char *token = strtok_r(buffer, " ", &rest);

@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 
 	int simultaneousConnections, sockfd, connfd, len;
 	char portNumber[10], *inputFile = argv[1];
-    bzero(rootDirectory, 100); bzero(indexFileName, 100);
+    bzero(rootDirectory, 100); bzero(indexFileName, 100), bzero(portNumber, 10);
 
 	readConfigFile(inputFile, &simultaneousConnections, portNumber);
 
