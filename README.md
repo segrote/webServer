@@ -18,6 +18,11 @@ accessed using
 ```
 make run
 ```
+the default port is 9999 so in order to connect via a browser just enter
+
+```
+localhost:9999
+```
 
 ## CGI Usage
 
