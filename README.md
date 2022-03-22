@@ -38,4 +38,4 @@ the form of threading, CGI Get and Post responsing, logging, and a basic config 
 server parameters. In my testing using firefox everything functioned correctly with no issues. I do however 
 randomly get some buffer overflows randomly when trying to read from the client which I thought was strange
 since I am using a buffer size of 8190 bytes like apache server.. Sometimes I get this issue and sometimes
-I do not (hopefully not for you)
+I do not (hopefully not for you).
