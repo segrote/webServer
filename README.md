@@ -1,7 +1,7 @@
 # Lab #1 – HTTP Web Server
 
 ```
-Test Machine: CSEL-KH1250-12
+Test Machine: Windows 11 VirtualBox running Ubuntu 20.04 LTS
 ```
 ## Usage
 
