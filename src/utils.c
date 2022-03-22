@@ -197,23 +197,22 @@ void *readHandler(void *arg)
 				free(tok);
 				free(name);
 
-				printf("forking!\n");
-				fflush(stdout);
-
 				pid_t pid1;
 				char* command[3];
 				command[0] = "/usr/bin/bash";
 				char* args[] = {"/usr/bin/bash","cgi-bin/getFile.sh","NULL"};
 
 				pid1 = fork();
-				if(pid1 == 0) {
+				if(pid1 == 0)
+				{
 					close(1);		//close stdout
 					dup2(s,1);
 					execv(command[0],args);
 					printf("(%d) Error: execv returned... error... exiting\n",s);
 					exit(0);
 				}
-				else {
+				else
+				{
 					close(s);
 				}
 			} else
@@ -486,25 +485,22 @@ void *readHandler(void *arg)
 
 					free(tok);
 
-					printf("forking!\n");
-					fflush(stdout);
-
-					printf("%s\n", getenv("QUERY_STRING"));
-
 					pid_t pid1;
 					char* command[3];
 					command[0] = "/usr/bin/bash";
 					char* args[] = {"/usr/bin/bash","cgi-bin/sum.sh","NULL"};
 
 					pid1 = fork();
-					if(pid1 == 0) {
+					if(pid1 == 0)
+					{
 						close(1);		//close stdout
 						dup2(s,1);
 						execv(command[0],args);
 						printf("(%d) Error: execv returned... error... exiting\n",s);
 						exit(0);
 					}
-					else {
+					else
+					{
 						close(s);
 					}
 				}
@@ -517,4 +513,6 @@ void *readHandler(void *arg)
 		perror("Can't read data from the client because ");
 		fflush(stderr);
 	}
+
+	close(s);
 }
