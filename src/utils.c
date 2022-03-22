@@ -168,6 +168,7 @@ void *readHandler(void *arg)
 	int s = *(int*) arg;
 	ssize_t ssize;
 	char buffer[8190];
+	bzero(buffer, 8190);
 	char *rest;
 
 	if ((ssize = read(s, &buffer, sizeof(buffer))) > 0)		//if we can read data from the client
@@ -198,29 +199,21 @@ void *readHandler(void *arg)
 
 				printf("forking!\n");
 				fflush(stdout);
-				close(1);		//close stdout
-				dup2(s, 1);		//copy client to stdout
-				
-				int i = fork();
-				if (i == 0)	//child process
-				{
-					char *temp[] = {"cgi-bin/./getFile.sh", NULL};
-					if (execv("/bin/bash", temp) == -1)	// test for execv fail
-					{
-						//error 500
-						const char *error = "HTTP/1.1 500 Internal Server Error\r\n";
 
-						if (write(s, error, strlen(error)) != strlen(error))
-						{
-							perror("Error 500 write failed because ");
-							fflush(stderr);
-							exit(4);
-						}
-					}
-				} else
+				pid_t pid1;
+				char* command[3];
+				command[0] = "/usr/bin/bash";
+				char* args[] = {"/usr/bin/bash","cgi-bin/getFile.sh","NULL"};
 
-				if (i == 1) //parent process
-				{
+				pid1 = fork();
+				if(pid1 == 0) {
+					close(1);		//close stdout
+					dup2(s,1);
+					execv(command[0],args);
+					printf("(%d) Error: execv returned... error... exiting\n",s);
+					exit(0);
+				}
+				else {
 					close(s);
 				}
 			} else
@@ -478,11 +471,12 @@ void *readHandler(void *arg)
 
 			while (token != NULL)
 			{
-				if (strstr(token, "First="))		//query
+				char *substr;
+				if (substr = strstr(token, "First="))		//query
 				{
-					char *tok = malloc(strlen(token));
-					strcpy(tok, token);
-					printf("%s\n", tok);
+					char *tok = malloc(strlen(substr) + 1);
+					strcpy(tok, substr);
+					tok[strlen(substr)] = '\0';
 
 					if (setenv("QUERY_STRING", tok, 1) == -1)
 					{
@@ -494,28 +488,23 @@ void *readHandler(void *arg)
 
 					printf("forking!\n");
 					fflush(stdout);
-					close(1);		//close stdout
-					dup2(s, 1);		//copy client to stdout
 
-					int i = fork();
-					if (i == 0)	//child process
-					{
-						char *temp[] = {"cgi-bin/./sum.sh", NULL};
-						if (execv("/bin/bash", temp) == -1)	// test for execv fail
-						{
-							//error 500
-							const char *error = "HTTP/1.1 500 Internal Server Error\r\n";
+					printf("%s\n", getenv("QUERY_STRING"));
 
-							if (write(s, error, strlen(error)) != strlen(error))
-							{
-								perror("Error 500 write failed because ");
-								fflush(stderr);
-								exit(4);
-							}
-						}
-					} else
-					if (i == 1) //parent process
-					{
+					pid_t pid1;
+					char* command[3];
+					command[0] = "/usr/bin/bash";
+					char* args[] = {"/usr/bin/bash","cgi-bin/sum.sh","NULL"};
+
+					pid1 = fork();
+					if(pid1 == 0) {
+						close(1);		//close stdout
+						dup2(s,1);
+						execv(command[0],args);
+						printf("(%d) Error: execv returned... error... exiting\n",s);
+						exit(0);
+					}
+					else {
 						close(s);
 					}
 				}
