@@ -23,7 +23,7 @@ make run
 
 Using the included form.htm and form2.htm I directly integrated the forms into the SHOP page at the bottom
 of the scrollable pane. A picture below is included for reference in locating the links
-![](./images/reference.jpg)
+![](images/reference.jpg)
 
 
 ## Algorithms
