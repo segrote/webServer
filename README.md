@@ -3,9 +3,6 @@
 ```
 Test Machine: CSEL-KH1250-12
 ```
-March 22, 2022
-```
-
 ## Usage
 
 To run my Web Server first ensure you are in the root directory of the project (/webServer) and then run
